@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<servers>
+  <server auto-publish-setting="1" glassfish.adminserverportnumber="4848" glassfish.domainpath="C:\glassfish-5.0\glassfish\domains\domain1" glassfish.serverportnumber="8080" hostname="localhost" id="GlassFish 5 [domain1]" name="GlassFish 5 [domain1]" runtime-id="GlassFish 5" server-type="glassfish.server" server-type-id="glassfish.server" start-timeout="240" stop-timeout="240" timestamp="19">
+    <list key="modules" value0="ChatApplication::org.eclipse.jst.jee.server:ChatApplication::jst.web::4.0"/>
+  </server>
+</servers>

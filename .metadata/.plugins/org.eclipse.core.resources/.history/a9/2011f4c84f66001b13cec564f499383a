@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="ISO-8859-1">
+<title>Insert title here</title>
+</head>
+<body>
+
+	<h1>Chat Application</h1>
+
+	<form action="">
+		<table>
+			<tr>
+				<td>All Messages<br /> <textarea rows="15" cols="40"
+						id="textmessage" readonly="readonly"></textarea></td>
+				<td>Sensors<br /> <textarea readonly="readonly" rows="16"
+						cols="15" id="sensors"></textarea>
+				</td>
+			</tr>
+			<tr>
+				<td colspan="2"><input id="textField" size="70" type="text" />
+					<input onclick="sendMessage();" value="SendMessage" type="button" />
+					<input onclick="disconnect();" value="Disconnect" type="button" />
+				</td>
+			</tr>
+		</table>
+	</form>
+	<div id="output"></div>
+	
+	
+</body>
+</html>

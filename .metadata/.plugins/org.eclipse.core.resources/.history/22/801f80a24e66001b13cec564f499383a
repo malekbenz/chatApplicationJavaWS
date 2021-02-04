@@ -1,0 +1,29 @@
+package com.malekbenz;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+import javax.json.Json; 
+import javax.json.JsonObject;
+import javax.json.JsonWriter;
+import javax.websocket.EncodeException;
+import javax.websocket.OnClose;
+import javax.websocket.OnMessage;
+import javax.websocket.OnOpen;
+import javax.websocket.Session;
+import javax.websocket.server.ServerEndpoint; 
+
+@ServerEndpoint("/messagingendpoint") 
+public class SendInformation {
+
+	private static final Set<Session> sensorSession = Collections.synchronizedSet(new
+			HashSet<Session>());
+
+			@OnOpen
+			public void onOpen(Session session) {
+				
+				sensorSession.add(session);
+			 } 
+}
