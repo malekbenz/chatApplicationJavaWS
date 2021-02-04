@@ -9,12 +9,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 import javax.json.Json;
-import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
-import javax.json.JsonObjectBuilder;
-import javax.json.JsonString;
-import javax.json.JsonValue;
 import javax.json.JsonWriter;
 import javax.websocket.EncodeException;
 import javax.websocket.OnClose;
@@ -23,11 +19,7 @@ import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
 
-import com.sun.corba.se.impl.encoding.OSFCodeSetRegistry.Entry;
-import com.sun.javafx.collections.MappingChange.Map;
-import com.sun.xml.bind.v2.schemagen.xmlschema.List;
-
-@ServerEndpoint("/messagingendpoint")
+@ServerEndpoint("/messages")
 public class SendInformation {
 
 	private static final Set<Session> sensorSession = Collections.synchronizedSet(new HashSet<Session>());

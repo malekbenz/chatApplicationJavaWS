@@ -12,7 +12,7 @@
 		<table>
 			<tr>
 				<td>All Messages<br /> <textarea rows="15" cols="40"
-						id="allMessage" readonly="readonly"></textarea></td>
+						id="txtAllMessage" readonly="readonly"></textarea></td>
 				<td>Sensors<br /> <textarea readonly="readonly" rows="16"
 						cols="15" id="sensors"></textarea>
 				</td>
@@ -28,25 +28,55 @@
 	<div id="output"></div>
 
 	<script>
-		var ws = new WebSocket(
-				"ws://localhost:8080/ChatApplication/messagingendpoint");
+		var URL = "ws://localhost:8080/ChatApplication/messages";
+		var output = document.getElementById("output");
 		var txtMessage = document.getElementById("txtMessage");
-		var allMessage = document.getElementById("allMessage");
+		var txtAllMessage = document.getElementById("txtAllMessage");
 		var sensor = document.getElementById("sensors");
 
-		var output = document.getElementById("output");
-		ws.onopen = function(evt) {
-			onOpen(evt);
-		};
-		ws.onmessage = function(evt) {
-			onMessage(evt);
-		};
-		ws.onerror = function(evt) {
-			onError(evt);
-		};
-		ws.onclose = function(evt) {
-			onClose(evt);
-		};
+		var ws = null;
+		var isConnected = ()=> ws.readyState == 1;
+		
+		function connect() {
+			ws = new WebSocket(URL);
+
+			ws.onopen = function(evt) {
+				writeToScreen("CONNECTED");
+				console.log('isConnected', isConnected() )
+			};
+
+			ws.onmessage = function(evt) {
+				console.log('evt.data', evt.data);
+				var jsdata = JSON.parse(evt.data);
+				if (Array.isArray(jsdata)) {
+					console.log('evt.data is an array', jsdata);
+					sensor.innerHTML += extractUserName(jsdata[0]);
+					writeToScreen("RECEIVED: " + jsdata[0]);
+					for (var i = 1; i < jsdata.length; i++) {
+						var msg = JSON.parse(jsdata[i]);
+						showMessage(msg.message);
+
+					}
+
+				} else {
+					showMessage(jsdata.message);
+					writeToScreen("RECEIVED: " + jsdata.message);
+
+				}
+			};
+			
+			ws.onerror = function(evt) {
+				writeToScreen('<span style="color: red;">ERROR:</span> '
+						+ evt.data);
+			};
+
+			ws.onclose = function(evt) {
+				writeToScreen("DISCONNECTED");
+			};
+		}
+
+		connect();
+
 		function extractUserName(message) {
 			userName = message.substring(message.indexOf(">") + 1,
 					message.length - 2);
@@ -54,51 +84,34 @@
 		}
 
 		function showMessage(message) {
-			allMessage.value += message + "\n";
+			txtAllMessage.value += message + "\n";
 
 		}
 
-		function onMessage(evt) {
-			console.log('evt.data', evt.data);
-			var jsdata = JSON.parse(evt.data);
-			if (Array.isArray(jsdata)) {
-				console.log('evt.data is an array', jsdata);
-				sensor.innerHTML += extractUserName(jsdata[0]);
-				writeToScreen("RECEIVED: " + jsdata[0]);
-				for(var i = 1 ; i< jsdata.length ; i++ ){
-					var msg = JSON.parse(jsdata[i]);		
-					showMessage(msg.message );
-					
-				}
-				
-
-			} else {
-				showMessage(jsdata.message);
-				writeToScreen("RECEIVED: " + jsdata.message);
-
-			}
-
-		}
-
-		function sendMessage() {
+			
+		function sendMessageToServer() {
 			ws.send(txtMessage.value);
 			txtMessage.value = "";
 		}
-		function onOpen() {
-			writeToScreen("CONNECTED");
+		
+		function sendMessage() {
+			
+			if(!isConnected()){
+				connect();
+				setTimeout( sendMessageToServer,10)
+				
+			}else{
+				sendMessageToServer()
+			}
 		}
-		function onClose() {
-			writeToScreen("DISCONNECTED");
-		}
-		function onError(evt) {
-			writeToScreen('<span style="color: red;">ERROR:</span> ' + evt.data);
-		}
+
 		function writeToScreen(message) {
 			var pre = document.createElement("p");
 			pre.style.wordWrap = "break-word";
 			pre.innerHTML = message;
 			output.appendChild(pre);
 		}
+
 		function disconnect() {
 			ws.close();
 		}
