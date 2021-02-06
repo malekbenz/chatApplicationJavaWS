@@ -1,3 +1,0 @@
-#GlassFish 3
-#Thu Feb 04 22:57:09 GMT+01:00 2021
-org.eclipse.jst.jee.server\:ChatApplication=C\:\\glassfish-5.0\\glassfish\\domains\\domain1\\eclipseApps\\ChatApplication
