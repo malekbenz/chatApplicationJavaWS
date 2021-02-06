@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-<meta charset="ISO-8859-1">
-<title>Insert title here</title>
+	<meta charset="ISO-8859-1">
+	<title>Insert title here</title>
 </head>
+
 <body>
 
 	<h1>Chat Application</h1>
@@ -11,15 +13,14 @@
 	<form action="">
 		<table>
 			<tr>
-				<td>All Messages<br /> <textarea rows="15" cols="40"
-						id="txtAllMessage" readonly="readonly"></textarea></td>
-				<td>Sensors<br /> <textarea readonly="readonly" rows="16"
-						cols="15" id="sensors"></textarea>
+				<td>All Messages<br /> <textarea rows="15" cols="40" id="txtAllMessage" readonly="readonly"></textarea>
+				</td>
+				<td>Sensors<br /> <textarea readonly="readonly" rows="16" cols="15" id="sensors"></textarea>
 				</td>
 			</tr>
 			<tr>
 				<td colspan="2"><input id="txtMessage" size="70" type="text" />
-					<input onclick="sendMessage();" value="SendMessage" type="button" />
+					<input id="btnSendMessage" value="SendMessage" type="submit" />
 					<input onclick="disconnect();" value="Disconnect" type="button" />
 				</td>
 			</tr>
@@ -33,44 +34,48 @@
 		var txtMessage = document.getElementById("txtMessage");
 		var txtAllMessage = document.getElementById("txtAllMessage");
 		var sensor = document.getElementById("sensors");
+		document.getElementById("btnSendMessage")
+			.addEventListener('click', sendMessage);
 
 		var ws = null;
-		var isConnected = ()=> ws.readyState == 1;
-		
+		let sensors = new Set();
+		var isConnected = () => ws.readyState == 1;
+
 		function connect() {
 			ws = new WebSocket(URL);
-
-			ws.onopen = function(evt) {
+			ws.onopen = function (evt) {
 				writeToScreen("CONNECTED");
-				console.log('isConnected', isConnected() )
+				console.log('isConnected', isConnected())
 			};
 
-			ws.onmessage = function(evt) {
-				console.log('evt.data', evt.data);
+			ws.onmessage = function (evt) {
 				var jsdata = JSON.parse(evt.data);
+				console.log('jsdata', jsdata);
 				if (Array.isArray(jsdata)) {
+					jsdata = jsdata.map(x => JSON.parse(x));
 					console.log('evt.data is an array', jsdata);
-					sensor.innerHTML += extractUserName(jsdata[0]);
-					writeToScreen("RECEIVED: " + jsdata[0]);
-					for (var i = 1; i < jsdata.length; i++) {
-						var msg = JSON.parse(jsdata[i]);
-						showMessage(msg.message);
 
+					txtAllMessage.value = "";
+					// sensor.innerHTML += extractUserName(jsdata[0].payload);
+					// writeToScreen("RECEIVED: " + jsdata[0].payload);
+					for (var i = 1; i < jsdata.length; i++) {
+						var msg = jsdata[i];
+						processMessage(msg);
 					}
 
 				} else {
-					showMessage(jsdata.message);
-					writeToScreen("RECEIVED: " + jsdata.message);
+					processMessage(jsdata);
+					writeToScreen("RECEIVED: " + jsdata.payload);
 
 				}
 			};
-			
-			ws.onerror = function(evt) {
+
+			ws.onerror = function (evt) {
 				writeToScreen('<span style="color: red;">ERROR:</span> '
-						+ evt.data);
+					+ evt.data);
 			};
 
-			ws.onclose = function(evt) {
+			ws.onclose = function (evt) {
 				writeToScreen("DISCONNECTED");
 			};
 		}
@@ -79,28 +84,70 @@
 
 		function extractUserName(message) {
 			userName = message.substring(message.indexOf(">") + 1,
-					message.length - 2);
+				message.length);
 			return userName;
 		}
-
+		function processMessage(message) {
+			switch (message.type) {
+				case "message":
+					showMessage(message)
+					break;
+				case "sensorAdded":
+					sensorAdded(message);
+					break;
+				case "sensorRemoved":
+					sensorRemoved(message);
+					break;
+				case "connectedSensors":
+					connectedSensors(message);
+					break;
+				default:
+					console.log('Not implemented case', message);
+			}
+		}
 		function showMessage(message) {
-			txtAllMessage.value += message + "\n";
-
+			txtAllMessage.value += message.username + ':' + message.payload + "\n";
 		}
 
-			
+		function connectedSensors(message) {
+			var allSensors = JSON.parse(message.payload);
+			console.log(`All sensors `, allSensors);
+			allSensors.forEach(x => {
+				sensors.add(x)
+			});
+			showSensors();
+		}
+		function sensorAdded(message) {
+			console.log(`Sensor ${message.payload} has been Added`);
+			sensors.add(message.payload);
+			showSensors();
+		}
+		function showSensors() {
+			sensor.innerHTML = '';
+			for (let sensorName of sensors) {
+				sensor.innerHTML += sensorName + '\r\n';
+			}
+		}
+
+		function sensorRemoved(message) {
+			console.log(`Sensor ${message.payload} has been removed`);
+			sensors.delete(message.payload);
+			showSensors();
+		}
+
+
 		function sendMessageToServer() {
 			ws.send(txtMessage.value);
 			txtMessage.value = "";
 		}
-		
-		function sendMessage() {
-			
-			if(!isConnected()){
+
+		function sendMessage(event) {
+			event.preventDefault();
+			if (!isConnected()) {
 				connect();
-				setTimeout( sendMessageToServer,10)
-				
-			}else{
+				setTimeout(sendMessageToServer, 10)
+
+			} else {
 				sendMessageToServer()
 			}
 		}
@@ -114,7 +161,10 @@
 
 		function disconnect() {
 			ws.close();
+			sensors.clear();
+			showSensors();
 		}
 	</script>
 </body>
+
 </html>
