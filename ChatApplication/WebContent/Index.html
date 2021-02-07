@@ -53,7 +53,6 @@
 				console.log('jsdata', jsdata);
 				if (Array.isArray(jsdata)) {
 					jsdata = jsdata.map(x => JSON.parse(x));
-					console.log('evt.data is an array', jsdata);
 
 					txtAllMessage.value = "";
 					// sensor.innerHTML += extractUserName(jsdata[0].payload);
