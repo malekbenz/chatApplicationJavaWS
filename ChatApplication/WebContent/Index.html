@@ -111,9 +111,7 @@
 		function connectedSensors(message) {
 			var allSensors = JSON.parse(message.payload);
 			console.log(`All sensors `, allSensors);
-			allSensors.forEach(x => {
-				sensors.add(x)
-			});
+			allSensors.forEach(x => sensors.add(x));
 			showSensors();
 		}
 		function sensorAdded(message) {
@@ -161,6 +159,7 @@
 		function disconnect() {
 			ws.close();
 			sensors.clear();
+			txtAllMessage.value = "";
 			showSensors();
 		}
 	</script>
