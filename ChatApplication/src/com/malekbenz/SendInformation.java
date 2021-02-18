@@ -1,13 +1,13 @@
 package com.malekbenz;
 
 import java.io.IOException;
-import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.stream.Collectors;
+
 import javax.json.Json;
 import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
@@ -20,41 +20,69 @@ import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
 
+class MessageInfo {
+	private String Sensor; 
+	public String getSensor() {
+		return Sensor;
+	}
+	public void setSensor(String sensor) {
+		Sensor = sensor;
+	}
+	public String getMessage() {
+		return Message;
+	}
+	public void setMessage(String message) {
+		Message = message;
+	}
+	private String Message ;
+	public MessageInfo(String sensor, String message) {
+			Sensor = sensor;
+			Message = message;
+		}
+}
+
 @ServerEndpoint("/messages")
 public class SendInformation {
+	private static int messageCounter = 0;
+	private static final Set<Session> Sessions = Collections.synchronizedSet(new HashSet<Session>());
 
-	private static final Set<Session> sensorSession = Collections.synchronizedSet(new HashSet<Session>());
+	private static final HashMap<Integer, MessageInfo> Messages = new HashMap<Integer, MessageInfo>();
 
-	private static final Collection<String> Messages = new ArrayList<String>();
-
-	private static final Set<String> sensors = Collections.synchronizedSet(new HashSet<String>());
+	
+	private static final HashMap<String, Integer> sensorsHistory = new HashMap<String, Integer>();
 
 	@OnOpen
 	public void onOpen(Session session) {
-		sensorSession.add(session);
+		Sessions.add(session);
 	}
 
 	@OnClose
 	public void onClose(Session session) {
-		String sensorName = (String) session.getUserProperties().get("sensor");
-		sensorSession.remove(session);
-		sensors.remove(sensorName);
+		String sensorName = getSensorName(session);
+		Sessions.remove(session);
 		sendServerEvent(sensorName, "sensorRemoved");
 	}
 
-	public void sendServerEvent(String sensorName, String event) {
-		String msg = buildMessage("server", sensorName.toUpperCase(), event);
+	String getSensorName(Session sensor) {
+		return ((String) (sensor.getUserProperties().get("sensor")));
+	}
 
-		Iterator<Session> iter = sensorSession.iterator();
+	boolean isSensorConnect(Session sensor) {
+		return (getSensorName(sensor) != null);
+	}
+
+	public void sendServerEvent(String sensorName, String event) {
+		String msg = getJsonMessage("server", sensorName.toUpperCase(), event);
+
+		Iterator<Session> iter = Sessions.iterator();
 
 		while (iter.hasNext()) {
 			Session sensor = (Session) iter.next();
 
 			try {
-				if (((String) sensor.getUserProperties().get("sensor")) == null) {
-					
+				if (isSensorConnect(sensor)) {
+					sensor.getBasicRemote().sendText(msg);
 				}
-				sensor.getBasicRemote().sendText(msg);
 
 			} catch (IOException e) {
 			}
@@ -63,82 +91,122 @@ public class SendInformation {
 
 	}
 
-	public String getUserNameOrCreate(String message, Session client) throws IOException, EncodeException {
-		String username = (String) client.getUserProperties().get("sensor");
+	public String getUserNameOrCreate(String message, Session sensor) throws IOException, EncodeException {
+		String sensorName = getSensorName(sensor);
 
-		if (username == null) {
-			client.getUserProperties().put("sensor", message);
+		if (!isSensorConnect(sensor)) {
+			sensor.getUserProperties().put("sensor", message);
 		}
 
-		return username;
+		return sensorName;
+	}
+
+	public void addToSensorHistory(String sensorName) {
+		sensorsHistory.put(sensorName, messageCounter);
+	}
+
+	public void newSensorConnected(Session sensor, String sensorName) throws IOException, EncodeException {
+
+		sensorName = sensorName.toUpperCase();
+		sensor.getUserProperties().put("sensor", sensorName);
+
+		sendServerEvent(sensorName, "sensorAdded");
+
+		String msgJsonListConnectedSensors = getJsonMessage("server", getJsonListConnectedSensors(),
+				"connectedSensors");
+
+		String msgJsonMissingMessage = getJsonMessage("server", getJsonListAllMessagesFrom(sensor),
+				"missingMessage");
+
+		sendMessageTo(sensor, msgJsonListConnectedSensors, false);
+		sendMessageTo(sensor, msgJsonMissingMessage, true);
+		
+
 	}
 
 	@OnMessage
-	public void message(String message, Session client) throws IOException, EncodeException {
+	public void message(String message, Session sensor) throws IOException, EncodeException {
 
-		String sensorName = (String) client.getUserProperties().get("sensor");
-		if (sensorName == null) {
-			sensorName = message.toUpperCase();
-			client.getUserProperties().put("sensor", sensorName);
-			sensors.add(sensorName);
-			client.getBasicRemote().sendText(buildArrayData(sensorName));
+		if (isSensorConnect(sensor))
+			broadcastMessage(getSensorName(sensor), message);
+		else
+			newSensorConnected(sensor, message);
 
-			sendServerEvent(sensorName, "sensorAdded");
-
-
-			// envoyer la list des sensors
-			String connectedSensors = buildMessage("server", getAllConnectedSensors(), "connectedSensors");
-			client.getBasicRemote().sendText(connectedSensors);
-
-		} else {
-			sendMessage(sensorName, message);
-		}
 	}
 
-	private void sendMessage(String username, String message) {
-
-		String msg = buildMessage(username, message);
-
-		Messages.add(msg);
-
-		sensorSession.forEach(sensor -> {
+	private void sendMessageTo(Session sensor, String message, boolean isAddToHistory) {
+		if (isSensorConnect(sensor))
 			try {
-				if ((String) sensor.getUserProperties().get("sensor") != null)
-					sensor.getBasicRemote().sendText(msg);
+				sensor.getBasicRemote().sendText(message);
+				if (isAddToHistory)
+					addToSensorHistory(getSensorName(sensor));
+
 			} catch (IOException e) {
+				e.printStackTrace();
 			}
+	}
+
+	private void broadcastMessage(String sender, String message) {
+
+		String jsonMessage = getJsonMessage(sender, message);
+		Messages.put(messageCounter++,  new MessageInfo( sender, message));
+
+		Sessions.forEach(sensor -> {
+			sendMessageTo(sensor, jsonMessage, true);
 		});
 
+		String allMessagesWithMessageId = getJsonMessage("server", getJsonListAllSensors(), "allMessages");
+		Sessions.forEach(sensor -> {
+			sendMessageTo(sensor, allMessagesWithMessageId, false);
+		});
+
+//		String allMessages = getJsonMessage("server", getJsonListAllMessagesFrom(2), "allMessages");
+//		Sessions.forEach(sensor -> {
+//			sendMessageTo(sensor, allMessages, false);
+//		});
+
 	}
 
-	private String buildMessage(String username, String message) {
-		return buildMessage(username, message, "message");
+	private String getJsonMessage(String sender, String message) {
+		return getJsonMessage(sender, message, "message");
 	}
 
-	private String buildMessage(String username, String message, String type) {
-		JsonObjectBuilder jo = Json.createObjectBuilder().add("payload", message).add("username", username).add("type",
+	private String getJsonMessage(String sender, String message, String type) {
+		JsonObjectBuilder jo = Json.createObjectBuilder().add("payload", message).add("sender", sender).add("type",
 				type);
 
 		return jo.build().toString();
 	}
 
-	private String buildArrayData(String username) {
-		JsonArrayBuilder messagesArray = Json.createArrayBuilder();
-
-		messagesArray.add(buildMessage("Server", "sensor is connected as>" + username.toUpperCase()));
-
-		Messages.forEach(messagesArray::add);
-		return messagesArray.build().toString();
+	private String getJsonListConnectedSensors() {
+		JsonArrayBuilder jsonListConnectedSensors = Json.createArrayBuilder();
+		Sessions.stream().filter(this::isSensorConnect).forEach(sensor -> {
+			jsonListConnectedSensors.add(getSensorName(sensor));
+		});
+		return jsonListConnectedSensors.build().toString();
 	}
 
-	private String getAllConnectedSensors() {
-		JsonArrayBuilder messagesArray = Json.createArrayBuilder();
-		Iterator<String> iter = sensors.iterator();
+	private String getJsonListAllSensors() {
+		JsonArrayBuilder jsonListConnectedSensors = Json.createArrayBuilder();
+		sensorsHistory.forEach((sensorName, lastMessageId) -> {
+			jsonListConnectedSensors.add(sensorName + " " + lastMessageId);
+		});
 
-		while (iter.hasNext()) {
-			String sensorName = iter.next();
-			messagesArray.add(sensorName);
-		}
-		return messagesArray.build().toString();
+		return jsonListConnectedSensors.build().toString();
+	}
+
+	private String getJsonListAllMessagesFrom(Session sensor) {
+		JsonArrayBuilder jsonListConnectedSensors = Json.createArrayBuilder();
+		int lastMessageID =  sensorsHistory.get(getSensorName(sensor));
+		Messages
+				.entrySet()
+				.stream()
+				.filter(map -> map.getKey().intValue() >= lastMessageID)
+				.map((map) -> map.getValue())
+				.collect(Collectors.toList()).forEach((messageInfo) -> {
+					jsonListConnectedSensors.add(getJsonMessage(messageInfo.getSensor(),messageInfo.getMessage()));
+				});
+
+		return jsonListConnectedSensors.build().toString();
 	}
 }

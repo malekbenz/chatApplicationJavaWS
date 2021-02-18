@@ -6,7 +6,9 @@
 
 # BlueJ files
 *.ctxt
+.classpath
 
+.settings/*
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
 
@@ -32,7 +34,7 @@ target/
 .settings
 .springBeans
 .sts4-cache
-
+build/
 
 # Created by https://www.gitignore.io/api/git,java,maven,eclipse,windows
 

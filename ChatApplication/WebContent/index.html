@@ -3,7 +3,7 @@
 
 <head>
 	<meta charset="ISO-8859-1">
-	<title>Insert title here</title>
+	<title>Chat Application</title>
 </head>
 
 <body>
@@ -100,12 +100,16 @@
 				case "connectedSensors":
 					connectedSensors(message);
 					break;
+				case "missingMessage":
+					missingMessage(message);
+					break;	
+					
 				default:
 					console.log('Not implemented case', message);
 			}
 		}
 		function showMessage(message) {
-			txtAllMessage.value += message.username + ':' + message.payload + "\n";
+			txtAllMessage.value += message.sender + ':' + message.payload + "\n";
 		}
 
 		function connectedSensors(message) {
@@ -114,6 +118,17 @@
 			allSensors.forEach(x => sensors.add(x));
 			showSensors();
 		}
+		
+		function missingMessage(message) {
+			var allMessages = JSON.parse(message.payload);
+			allMessages = allMessages
+				.map(JSON.parse)
+				.forEach(showMessage);
+			
+			console.log(`All missingMessage Converted `, allMessages);
+		}
+		
+		
 		function sensorAdded(message) {
 			console.log(`Sensor ${message.payload} has been Added`);
 			sensors.add(message.payload);
