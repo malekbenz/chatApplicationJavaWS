@@ -136,11 +136,6 @@ public class SendInformation {
 			sendMessageTo(sensor, allMessagesWithMessageId, false);
 		});
 
-//		String allMessages = getJsonMessage("server", getJsonListAllMessagesFrom(2), "allMessages");
-//		Sessions.forEach(sensor -> {
-//			sendMessageTo(sensor, allMessages, false);
-//		});
-
 	}
 
 	private String getJsonMessage(String sender, String message) {
@@ -148,8 +143,10 @@ public class SendInformation {
 	}
 
 	private String getJsonMessage(String sender, String message, String type) {
-		JsonObjectBuilder jo = Json.createObjectBuilder().add("payload", message).add("sender", sender).add("type",
-				type);
+		JsonObjectBuilder jo = Json.createObjectBuilder()
+				.add("payload", message)
+				.add("sender", sender)
+				.add("type", type);
 
 		return jo.build().toString();
 	}
