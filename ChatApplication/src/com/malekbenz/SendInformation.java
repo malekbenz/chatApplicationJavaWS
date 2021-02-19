@@ -20,27 +20,6 @@ import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
 
-class MessageInfo {
-	private String Sensor; 
-	public String getSensor() {
-		return Sensor;
-	}
-	public void setSensor(String sensor) {
-		Sensor = sensor;
-	}
-	public String getMessage() {
-		return Message;
-	}
-	public void setMessage(String message) {
-		Message = message;
-	}
-	private String Message ;
-	public MessageInfo(String sensor, String message) {
-			Sensor = sensor;
-			Message = message;
-		}
-}
-
 @ServerEndpoint("/messages")
 public class SendInformation {
 	private static int messageCounter = 0;
@@ -48,7 +27,6 @@ public class SendInformation {
 
 	private static final HashMap<Integer, MessageInfo> Messages = new HashMap<Integer, MessageInfo>();
 
-	
 	private static final HashMap<String, Integer> sensorsHistory = new HashMap<String, Integer>();
 
 	@OnOpen
@@ -115,12 +93,10 @@ public class SendInformation {
 		String msgJsonListConnectedSensors = getJsonMessage("server", getJsonListConnectedSensors(),
 				"connectedSensors");
 
-		String msgJsonMissingMessage = getJsonMessage("server", getJsonListAllMessagesFrom(sensor),
-				"missingMessage");
+		String msgJsonMissingMessage = getJsonMessage("server", getJsonListAllMessagesFrom(sensor), "missingMessage");
 
 		sendMessageTo(sensor, msgJsonListConnectedSensors, false);
 		sendMessageTo(sensor, msgJsonMissingMessage, true);
-		
 
 	}
 
@@ -149,7 +125,7 @@ public class SendInformation {
 	private void broadcastMessage(String sender, String message) {
 
 		String jsonMessage = getJsonMessage(sender, message);
-		Messages.put(messageCounter++,  new MessageInfo( sender, message));
+		Messages.put(messageCounter++, new MessageInfo(sender, message));
 
 		Sessions.forEach(sensor -> {
 			sendMessageTo(sensor, jsonMessage, true);
@@ -197,14 +173,19 @@ public class SendInformation {
 
 	private String getJsonListAllMessagesFrom(Session sensor) {
 		JsonArrayBuilder jsonListConnectedSensors = Json.createArrayBuilder();
-		int lastMessageID =  sensorsHistory.get(getSensorName(sensor));
-		Messages
-				.entrySet()
-				.stream()
+
+		if (sensorsHistory.get(getSensorName(sensor)) == null) {
+			return jsonListConnectedSensors.build().toString();
+
+		}
+		final int lastMessageID = sensorsHistory.get(getSensorName(sensor));
+
+		
+		Messages.entrySet().stream()
 				.filter(map -> map.getKey().intValue() >= lastMessageID)
 				.map((map) -> map.getValue())
 				.collect(Collectors.toList()).forEach((messageInfo) -> {
-					jsonListConnectedSensors.add(getJsonMessage(messageInfo.getSensor(),messageInfo.getMessage()));
+					jsonListConnectedSensors.add(getJsonMessage(messageInfo.getSensor(), messageInfo.getMessage()));
 				});
 
 		return jsonListConnectedSensors.build().toString();

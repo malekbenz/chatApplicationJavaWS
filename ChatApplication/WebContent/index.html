@@ -2,8 +2,8 @@
 <html>
 
 <head>
-	<meta charset="ISO-8859-1">
-	<title>Chat Application</title>
+<meta charset="ISO-8859-1">
+<title>Chat Application</title>
 </head>
 
 <body>
@@ -13,16 +13,17 @@
 	<form action="">
 		<table>
 			<tr>
-				<td>All Messages<br /> <textarea rows="15" cols="40" id="txtAllMessage" readonly="readonly"></textarea>
+				<td>All Messages<br /> <textarea rows="15" cols="40"
+						id="txtAllMessage" readonly="readonly"></textarea>
 				</td>
-				<td>Sensors<br /> <textarea readonly="readonly" rows="16" cols="15" id="sensors"></textarea>
+				<td>Sensors<br /> <textarea readonly="readonly" rows="16"
+						cols="15" id="sensors"></textarea>
 				</td>
 			</tr>
 			<tr>
 				<td colspan="2"><input id="txtMessage" size="70" type="text" />
-					<input id="btnSendMessage" value="SendMessage" type="submit" />
-					<input onclick="disconnect();" value="Disconnect" type="button" />
-				</td>
+					<input id="btnSendMessage" value="SendMessage" type="submit" /> <input
+					onclick="disconnect();" value="Disconnect" type="button" /></td>
 			</tr>
 		</table>
 	</form>
@@ -51,22 +52,8 @@
 			ws.onmessage = function (evt) {
 				var jsdata = JSON.parse(evt.data);
 				console.log('jsdata', jsdata);
-				if (Array.isArray(jsdata)) {
-					jsdata = jsdata.map(x => JSON.parse(x));
-
-					txtAllMessage.value = "";
-					// sensor.innerHTML += extractUserName(jsdata[0].payload);
-					// writeToScreen("RECEIVED: " + jsdata[0].payload);
-					for (var i = 1; i < jsdata.length; i++) {
-						var msg = jsdata[i];
-						processMessage(msg);
-					}
-
-				} else {
-					processMessage(jsdata);
-					writeToScreen("RECEIVED: " + jsdata.payload);
-
-				}
+				processMessage(jsdata);
+				writeToScreen("RECEIVED: " + jsdata.payload);
 			};
 
 			ws.onerror = function (evt) {
